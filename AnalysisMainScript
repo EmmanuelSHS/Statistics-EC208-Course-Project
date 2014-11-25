@@ -1,0 +1,229 @@
+raw1<-read.csv('D:/Dream/Documents/SJTU/Statistic/Course Project/2005-2008.csv')
+raw2<-read.csv('D:/Dream/Documents/SJTU/Statistic/Course Project/2008-2011.csv')
+raw3<-read.csv('D:/Dream/Documents/SJTU/Statistic/Course Project/2011-2014.csv')
+raw4<-read.csv('D:/Dream/Documents/SJTU/Statistic/Course Project/Ready To Run 2005-2014_2.csv')
+
+# R-Rf~Dummy
+# Initiate result matrix (the same from res1 to 13)
+res1<-matrix(NA,20,12)
+colnames(res1)<-c(paste(rep(c('Intercept','Mon','Tue','Thur','Fri'),times=2),rep(c('value','p'),each=5),sep=' '),'R squared','Adj R Squared')
+rownames(res1)<-c(paste('R',1:20,'-Rf',sep=''))
+
+for(j in 1:4)# loop for raw1~raw4
+{
+  tp.data<-get(paste('raw',j,sep=''))# select a specified raw data
+  attach(tp.data)
+  file.name<-switch(j,'1'='2005_2008','2'='2008_2011','3'='2011_2014','4'='2005_2014')# Save csv with different file names
+  for (i in 1:20)
+  {
+    tp.lm<-lm(get(paste('R',i,'.Rf',sep=''))~Monday+Tuesday+Thursday+Friday)
+    # Get the regression result
+    res1[i,]<-c(as.vector(summary(tp.lm)$coefficient[,-2:-3]),summary(tp.lm)$r.squared,summary(tp.lm)$adj.r.squared) 
+    # Save the result into result matrix
+  }
+  write.csv(res1,file=paste('rrf_weekday_',file.name,'.csv',sep=''))
+}
+
+# R-Rf~Dummy+(Rm-Rf)
+res2<-matrix(NA,20,14)
+colnames(res2)<-c(paste(rep(c('Intercept','Mon','Tue','Thur','Fri','Rm-Rf'),times=2),rep(c('value','p'),each=6),sep=' '),'R squared','Adj R Squared')
+rownames(res2)<-c(paste('R',1:20,'-Rf',sep=''))
+for(j in 1:4)
+{
+  tp.data<-get(paste('raw',j,sep=''))
+  attach(tp.data)
+  file.name<-switch(j,'1'='2005_2008','2'='2008_2011','3'='2011_2014','4'='2005_2014')
+  for (i in 1:20)
+  {
+    tp.lm<-lm(get(paste('R',i,'.Rf',sep=''))~Monday+Tuesday+Thursday+Friday+Rm.Rf)
+    res2[i,]<-c(as.vector(summary(tp.lm)$coefficient[,-2:-3]),summary(tp.lm)$r.squared,summary(tp.lm)$adj.r.squared) 
+  }
+  write.csv(res2,file=paste('rrf_weekday_rmrf_',file.name,'.csv',sep=''))
+}
+
+#08-11 R-Rf~Rm-Rf +Mon+Tue+Thu+Fri+day*(Rm-Rf)
+res3<-matrix(NA,20,16)
+colnames(res3)<-c(paste(rep(c('Intercept','Mon','Tue','Thur','Fri','Rm-Rf','Fri*(Rm-Rf)'),times=2),rep(c('value','p'),each=7),sep=' '),'R squared','Adj R Squared')
+rownames(res3)<-c(paste('R',1:20,'-Rf',sep=''))
+for (i in 1:20)
+{
+  tp.data<-raw2
+  attach(tp.data)
+  tp.lm<-lm(get(paste('R',i,'.Rf',sep=''))~Monday+Tuesday+Thursday+Friday+Rm.Rf+Friday..Rm.Rf.)
+  res3[i,]<-c(as.vector(summary(tp.lm)$coefficient[,-2:-3]),summary(tp.lm)$r.squared,summary(tp.lm)$adj.r.squared) 
+}
+write.csv(res3,file='rrf_weekday_rmrf_dcrmrf_2008_2011.csv')
+
+#11-14 R-Rf~Rm-Rf +Mon+Tue+Thu+Fri+day*(Rm-Rf)
+res4<-matrix(NA,20,16)
+colnames(res4)<-c(paste(rep(c('Intercept','Mon','Tue','Thur','Fri','Rm-Rf','Thur*(Rm-Rf)'),times=2),rep(c('value','p'),each=7),sep=' '),'R squared','Adj R Squared')
+rownames(res4)<-c(paste('R',1:20,'-Rf',sep=''))
+for (i in 1:20)
+{
+  tp.data<-raw3
+  attach(tp.data)
+  tp.lm<-lm(get(paste('R',i,'.Rf',sep=''))~Monday+Tuesday+Thursday+Friday+Rm.Rf+Thursday..Rm.Rf.)
+  res4[i,]<-c(as.vector(summary(tp.lm)$coefficient[,-2:-3]),summary(tp.lm)$r.squared,summary(tp.lm)$adj.r.squared) 
+}
+write.csv(res4,file='rrf_weekday_rmrf_dcrmrf_2011_2014.csv')
+
+# Bartlett test
+res5<-matrix(NA,3,3)
+colnames(res5)<-c('Bartlett\'s K-squared','df','p-value')
+rownames(res5)<-c('2005_2008','2008_2011','2011_2014')
+for (j in 1:3)
+{
+  tp.data<-get(paste('raw',j,sep=''))
+  attach(tp.data)
+  tp.bt<-bartlett.test(R.Rf,Weekday)
+  res5[j,]<-c(tp.bt$statistic,tp.bt$parameter,tp.bt$p.value)  
+}
+write.csv(res5,file='bartlett_test.csv')
+
+# Shapiro test
+res6<-matrix(NA,3,10)
+colnames(res6)<-paste(c('w_','p-value_')[rep(c(1,2),times=5)],rep(c(1,2,3,4,5),each=2))
+rownames(res6)<-c('2005_2008','2008_2011','2011_2014')
+for (j in 1:3)
+{
+  tp.data<-get(paste('raw',j,sep=''))
+  attach(tp.data)
+  tp.st<-tapply(R.Rf,Weekday,shapiro.test)
+  res6[j,]<-c(tp.st$'1'$statistic,tp.st$'1'$p.value,
+             tp.st$'2'$statistic,tp.st$'2'$p.value,
+             tp.st$'3'$statistic,tp.st$'3'$p.value,
+             tp.st$'4'$statistic,tp.st$'4'$p.value,
+             tp.st$'5'$statistic,tp.st$'5'$p.value)
+}
+write.csv(res6,file='shapiro_test.csv')
+
+# Anova
+res7<-matrix(NA,3,8)
+colnames(res7)<-c('Df_Weekday','Sum Sq_Weekday','Mean Sq_Weekday','F value_Weekday','Pr(>F)_Weekday','Df_Residuals','Sum Sq_Residuals','Mean Sq_Residuals')
+rownames(res7)<-c('2005_2008','2008_2011','2011_2014')
+for (j in 1:3)
+{
+  tp.data<-get(paste('raw',j,sep=''))
+  attach(tp.data)
+  tp.aov<-aov(R.Rf~Weekday)
+  tp.res<-anova(tp.aov)
+  res7[j,]<-c(tp.res[1,1],tp.res[1,2],tp.res[1,3],tp.res[1,4],tp.res[1,5],tp.res[2,1],tp.res[2,2],tp.res[2,3])
+}
+write.csv(res7,file='anova.csv')
+
+#10 years
+tp.data<-raw4
+attach(tp.data)
+##R-Rf~Mon+Tue+Thur+Fri+ Rm-Rf +Thursday/Friday*(Rm-Rf)
+res8<-matrix(NA,20,16)
+colnames(res8)<-c(paste(rep(c('Intercept','Mon','Tue','Thur','Fri','Rm-Rf','Fri*(Rm-Rf)'),times=2),rep(c('value','p'),each=7),sep=' '),'R squared','Adj R Squared')
+rownames(res8)<-c(paste('R',1:20,'-Rf',sep=''))
+for (i in 1:20)
+{
+  tp.lm<-lm(get(paste('R',i,'.Rf',sep=''))~Monday+Tuesday+Thursday+Friday+Rm.Rf+Friday..Rm.Rf.)
+  res8[i,]<-c(as.vector(summary(tp.lm)$coefficient[,-2:-3]),summary(tp.lm)$r.squared,summary(tp.lm)$adj.r.squared) 
+}
+write.csv(res8,file='rrf_weekday_rmrf_fcrmrf_2005_2014.csv')
+
+res9<-matrix(NA,20,16)
+colnames(res9)<-c(paste(rep(c('Intercept','Mon','Tue','Thur','Fri','Rm-Rf','Thur*(Rm-Rf)'),times=2),rep(c('value','p'),each=7),sep=' '),'R squared','Adj R Squared')
+rownames(res9)<-c(paste('R',1:20,'-Rf',sep=''))
+for (i in 1:20)
+{
+  tp.lm<-lm(get(paste('R',i,'.Rf',sep=''))~Monday+Tuesday+Thursday+Friday+Rm.Rf+Friday..Rm.Rf.)
+  res9[i,]<-c(as.vector(summary(tp.lm)$coefficient[,-2:-3]),summary(tp.lm)$r.squared,summary(tp.lm)$adj.r.squared) 
+}
+write.csv(res9,file='rrf_weekday_rmrf_tcrmrf_2005_2014.csv')
+
+res10<-matrix(NA,20,18)
+colnames(res10)<-c(paste(rep(c('Intercept','Mon','Tue','Thur','Fri','Rm-Rf','Thur*(Rm-Rf)','Fri*(Rm-Rf)'),times=2),rep(c('value','p'),each=8),sep=' '),'R squared','Adj R Squared')
+rownames(res10)<-c(paste('R',1:20,'-Rf',sep=''))
+for (i in 1:20)
+{
+  tp.lm<-lm(get(paste('R',i,'.Rf',sep=''))~Monday+Tuesday+Thursday+Friday+Rm.Rf+Thursday..Rm.Rf.+Friday..Rm.Rf.)
+  res10[i,]<-c(as.vector(summary(tp.lm)$coefficient[,-2:-3]),summary(tp.lm)$r.squared,summary(tp.lm)$adj.r.squared) 
+}
+write.csv(res10,file='rrf_weekday_rmrf_t_f_crmrf_2005_2014.csv')
+##R-Rf~Mon+Tue+Thur+Fri+ Rm-Rf +UD*Thur/Fri
+res11<-matrix(NA,20,16)
+colnames(res11)<-c(paste(rep(c('Intercept','Mon','Tue','Thur','Fri','Rm-Rf','U/D Thur'),times=2),rep(c('value','p'),each=7),sep=' '),'R squared','Adj R Squared')
+rownames(res11)<-c(paste('R',1:20,'-Rf',sep=''))
+for (i in 1:20)
+{
+  tp.lm<-lm(get(paste('R',i,'.Rf',sep=''))~Monday+Tuesday+Thursday+Friday+Rm.Rf+Thu.UD)
+  res11[i,]<-c(as.vector(summary(tp.lm)$coefficient[,-2:-3]),summary(tp.lm)$r.squared,summary(tp.lm)$adj.r.squared) 
+}
+write.csv(res11,file='rrf_weekday_rmrf_tud_2005_2014.csv')
+
+res12<-matrix(NA,20,16)
+colnames(res12)<-c(paste(rep(c('Intercept','Mon','Tue','Thur','Fri','Rm-Rf','U.D.Fri'),times=2),rep(c('value','p'),each=7),sep=' '),'R squared','Adj R Squared')
+rownames(res12)<-c(paste('R',1:20,'-Rf',sep=''))
+for (i in 1:20)
+{
+  tp.lm<-lm(get(paste('R',i,'.Rf',sep=''))~Monday+Tuesday+Thursday+Friday+Rm.Rf+Fri.UD)
+  res12[i,]<-c(as.vector(summary(tp.lm)$coefficient[,-2:-3]),summary(tp.lm)$r.squared,summary(tp.lm)$adj.r.squared) 
+}
+write.csv(res12,file='rrf_weekday_rmrf_fud_2005_2014.csv')
+
+res13<-matrix(NA,20,18)
+colnames(res13)<-c(paste(rep(c('Intercept','Mon','Tue','Thur','Fri','Rm-Rf','U.D.Thu','U.D.Fri'),times=2),rep(c('value','p'),each=8),sep=' '),'R squared','Adj R Squared')
+rownames(res13)<-c(paste('R',1:20,'-Rf',sep=''))
+for (i in 1:20)
+{
+  tp.lm<-lm(get(paste('R',i,'.Rf',sep=''))~Monday+Tuesday+Thursday+Friday+Rm.Rf+Thu.UD+Fri.UD)
+  res13[i,]<-c(as.vector(summary(tp.lm)$coefficient[,-2:-3]),summary(tp.lm)$r.squared,summary(tp.lm)$adj.r.squared) 
+}
+write.csv(res13,file='rrf_weekday_rmrf_tfud_2005_2014.csv')
+
+##R-Rf~Rm-Rf +Mon+Tue+Thu+Fri+Thur/Fri*(Rm-Rf)
+res14<-matrix(NA,20,14)
+colnames(res14)<-c(paste(rep(c('Intercept','Mon','Tue','Thur','Fri','Fri*(Rm-Rf)'),times=2),rep(c('value','p'),each=6),sep=' '),'R squared','Adj R Squared')
+rownames(res14)<-c(paste('R',1:20,'-Rf',sep=''))
+for (i in 1:20)
+{
+  tp.lm<-lm(get(paste('R',i,'.Rf',sep=''))~Monday+Tuesday+Thursday+Friday+Friday..Rm.Rf.)
+  res14[i,]<-c(as.vector(summary(tp.lm)$coefficient[,-2:-3]),summary(tp.lm)$r.squared,summary(tp.lm)$adj.r.squared) 
+}
+write.csv(res14,file='rrf_weekday_rmrf_fcrmrf_2005_2014.csv')
+
+res15<-matrix(NA,20,14)
+colnames(res15)<-c(paste(rep(c('Intercept','Mon','Tue','Thur','Fri','Thur*(Rm-Rf)'),times=2),rep(c('value','p'),each=6),sep=' '),'R squared','Adj R Squared')
+rownames(res15)<-c(paste('R',1:20,'-Rf',sep=''))
+for (i in 1:20)
+{
+  tp.lm<-lm(get(paste('R',i,'.Rf',sep=''))~Monday+Tuesday+Thursday+Friday+Thursday..Rm.Rf.)
+  res15[i,]<-c(as.vector(summary(tp.lm)$coefficient[,-2:-3]),summary(tp.lm)$r.squared,summary(tp.lm)$adj.r.squared) 
+}
+write.csv(res15,file='rrf_weekday_rmrf_tcrmrf_2005_2014.csv')
+
+res16<-matrix(NA,20,16)
+colnames(res16)<-c(paste(rep(c('Intercept','Mon','Tue','Thur','Fri','Thur*(Rm-Rf)','Fri*(Rm-Rf)'),times=2),rep(c('value','p'),each=7),sep=' '),'R squared','Adj R Squared')
+rownames(res16)<-c(paste('R',1:20,'-Rf',sep=''))
+for (i in 1:20)
+{
+  tp.lm<-lm(get(paste('R',i,'.Rf',sep=''))~Monday+Tuesday+Thursday+Friday+Thursday..Rm.Rf.+Friday..Rm.Rf.)
+  res16[i,]<-c(as.vector(summary(tp.lm)$coefficient[,-2:-3]),summary(tp.lm)$r.squared,summary(tp.lm)$adj.r.squared) 
+}
+write.csv(res16,file='rrf_weekday_rmrf_tfcrmrf_2005_2014.csv')
+
+##R-Rf~mon+tue+thur+fri+u.d*(rm-rf)
+res17<-matrix(NA,20,14)
+colnames(res17)<-c(paste(rep(c('Intercept','Mon','Tue','Thur','Fri','UD*(Rm-Rf)'),times=2),rep(c('value','p'),each=6),sep=' '),'R squared','Adj R Squared')
+rownames(res17)<-c(paste('R',1:20,'-Rf',sep=''))
+for (i in 1:20)
+{
+  tp.lm<-lm(get(paste('R',i,'.Rf',sep=''))~Monday+Tuesday+Thursday+Friday+U.D..Rm.Rf.)
+  res17[i,]<-c(as.vector(summary(tp.lm)$coefficient[,-2:-3]),summary(tp.lm)$r.squared,summary(tp.lm)$adj.r.squared) 
+}
+write.csv(res17,file='rrf_weekday_udcrmrf_2005_2014.csv')
+
+##R-Rf~mon+tue+thur+fri+ud*(rm-rf)*mon+ud*(rm-rf)*tue+ud*(rm-rf)*thur+ud*(rm-rf)*fri
+res18<-matrix(NA,20,20)
+colnames(res18)<-c(paste(rep(c('Intercept','Mon','Tue','Thur','Fri','ud*(rm-rf)*mon','ud*(rm-rf)*tue','ud*(rm-rf)*thur','ud*(rm-rf)*fri'),times=2),rep(c('value','p'),each=9),sep=' '),'R squared','Adj R Squared')
+rownames(res18)<-c(paste('R',1:20,'-Rf',sep=''))
+for (i in 1:20)
+{
+  tp.lm<-lm(get(paste('R',i,'.Rf',sep=''))~Monday+Tuesday+Thursday+Friday+U.D.Mon..Rm.Rf.+U.D.Tue..Rm.Rf.+U.D.Thu..Rm.Rf.+U.D.Fri..Rm.Rf.)
+  res18[i,]<-c(as.vector(summary(tp.lm)$coefficient[,-2:-3]),summary(tp.lm)$r.squared,summary(tp.lm)$adj.r.squared) 
+}
+write.csv(res18,file='rrf_weekday_wdcrmrfcud_2005_2014.csv')
